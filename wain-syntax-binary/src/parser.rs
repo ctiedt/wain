@@ -201,6 +201,15 @@ impl<'s> Parser<'s> {
         }
     }
 
+    fn parse_flag_multiple(&mut self, bytes: &[u8], what: &'static str) -> Result<'s, u8> {
+        let b = self.consume(what)?;
+        if let Some(&byte) = bytes.iter().find(|&&byte| b == byte) {
+            Ok(byte)
+        } else {
+            Err(self.unexpected_byte(bytes, b, what))
+        }
+    }
+
     // https://webassembly.github.io/spec/core/binary/conventions.html#binary-vec
     fn parse_vec<P: Parse<'s>>(&mut self) -> Result<'s, VecItems<'_, 's, P>> {
         let size = self.parse_int::<u32>()? as usize;
@@ -856,6 +865,22 @@ impl<'s> Parse<'s> for Instruction {
             0xbd => I64ReinterpretF64,
             0xbe => F32ReinterpretI32,
             0xbf => F64ReinterpretI64,
+            0xfc => {
+                let discriminant =
+                    parser.parse_flag_multiple(&[10, 11], "reserved byte in memory.copy/fill")?;
+                match discriminant {
+                    10 => {
+                        parser.parse_flag(0x00, "reserved byte in memory.copy")?;
+                        parser.parse_flag(0x00, "reserved byte in memory.copy")?;
+                        MemoryCopy
+                    }
+                    11 => {
+                        parser.parse_flag(0x00, "reserved byte in memory.fill")?;
+                        MemoryFill
+                    }
+                    b => return Err(parser.unexpected_byte([], b, "memory instruction")),
+                }
+            }
             // https://webassembly.github.io/spec/core/binary/instructions.html#numeric-instructions
             b => return Err(parser.unexpected_byte([], b, "instruction")),
         };

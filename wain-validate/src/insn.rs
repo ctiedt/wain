@@ -506,6 +506,18 @@ impl<'outer, 'm, 's, S: Source> ValidateInsnSeq<'outer, 'm, 's, S> for Instructi
                 // pop i32 and push i32
                 ctx.ensure_op_stack_top(ValType::I32)?;
             }
+            MemoryCopy => {
+                if ctx.outer.module.memories.is_empty() {
+                    return ctx.error(ErrorKind::MemoryIsNotDefined);
+                }
+                ctx.op_stack.push(ValType::I32);
+            }
+            MemoryFill => {
+                if ctx.outer.module.memories.is_empty() {
+                    return ctx.error(ErrorKind::MemoryIsNotDefined);
+                }
+                ctx.op_stack.push(ValType::I32);
+            }
             I32Const(_) => ctx.op_stack.push(ValType::I32),
             I64Const(_) => ctx.op_stack.push(ValType::I64),
             F32Const(_) => ctx.op_stack.push(ValType::F32),

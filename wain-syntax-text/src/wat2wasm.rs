@@ -595,6 +595,8 @@ impl<'s> Transform<'s> for wat::Instruction<'s> {
             wat::InsnKind::I64Store32(mem) => wasm::InsnKind::I64Store32(mem.transform(ctx)?),
             wat::InsnKind::MemorySize => wasm::InsnKind::MemorySize,
             wat::InsnKind::MemoryGrow => wasm::InsnKind::MemoryGrow,
+            wat::InsnKind::MemoryCopy => wasm::InsnKind::MemoryCopy,
+            wat::InsnKind::MemoryFill => wasm::InsnKind::MemoryFill,
             // Numeric instructions
             // https://webassembly.github.io/spec/core/text/instructions.html#numeric-instructions
             // Constants

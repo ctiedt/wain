@@ -255,6 +255,8 @@ pub enum InsnKind {
     I64Store32(Mem),
     MemorySize,
     MemoryGrow,
+    MemoryCopy,
+    MemoryFill,
     // Numeric instructions
     // https://webassembly.github.io/spec/core/syntax/instructions.html#numeric-instructions
     // Constants
@@ -444,6 +446,8 @@ impl InsnKind {
             I64Store32(_) => "i64.store32",
             MemorySize => "memory.size",
             MemoryGrow => "memory.grow",
+            MemoryCopy => "memory.copy",
+            MemoryFill => "memory.fill",
             I32Const(_) => "i32.const",
             I64Const(_) => "i64.const",
             F32Const(_) => "f32.const",

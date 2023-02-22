@@ -6,6 +6,7 @@ use crate::stack::{Stack, StackAccess};
 use crate::table::Table;
 use crate::trap::{Result, Trap, TrapReason};
 use crate::value::{Float, LittleEndian, Value};
+use ast::{InsnKind, Instruction, Mem};
 use wain_ast as ast;
 use wain_ast::AsValType;
 
@@ -698,6 +699,38 @@ impl<'m, 's, I: Importer> Execute<'m, 's, I> for ast::Instruction {
                 let pages: i32 = runtime.stack.pop();
                 let prev_pages = runtime.module.memory.grow(pages as u32);
                 runtime.stack.push(prev_pages);
+            }
+            MemoryCopy => {}
+            MemoryFill => {
+                // TODO: Iterative impl
+                let mem = &mut runtime.module.memory;
+                let n: i32 = runtime.stack.pop();
+                let val: i32 = runtime.stack.pop();
+                let d: i32 = runtime.stack.pop();
+                if d + n > mem.size() as i32 {
+                    // TODO: Proper TrapReason
+                    return Err(Trap::new(TrapReason::DivByZeroOrOverflow, self.start));
+                } else if n == 0 {
+                    return Ok(ExecState::Ret);
+                } else {
+                    runtime.stack.push(d);
+                    runtime.stack.push(val);
+                    runtime.store(
+                        &Mem {
+                            align: 0,
+                            offset: 0,
+                        },
+                        val as i8,
+                        self.start,
+                    )?;
+                    runtime.stack.push(d + 1);
+                    runtime.stack.push(n - 1);
+                    Instruction {
+                        start: self.start,
+                        kind: InsnKind::MemoryFill,
+                    }
+                    .execute(runtime)?;
+                }
             }
             // Numeric instructions
             // https://webassembly.github.io/spec/core/exec/instructions.html#exec-const

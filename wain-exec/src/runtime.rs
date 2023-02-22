@@ -697,7 +697,64 @@ impl<'m, 's, I: Importer> Execute<'m, 's, I> for ast::Instruction {
                 let prev_pages = runtime.module.memory.grow(pages as u32);
                 runtime.stack.push(prev_pages);
             }
-            MemoryCopy => {}
+            MemoryCopy => {
+                let mem = &mut runtime.module.memory;
+                let n: i32 = runtime.stack.pop();
+                let s: i32 = runtime.stack.pop();
+                let d: i32 = runtime.stack.pop();
+                if s + n > mem.size() as i32 || d + n > mem.size() as i32 {
+                    // TODO: Proper TrapReason
+                    return Err(Trap::new(TrapReason::DivByZeroOrOverflow, self.start));
+                } else if n == 0 {
+                    return Ok(ExecState::Continue);
+                } else if d < s {
+                    runtime.stack.push(d);
+                    runtime.stack.push(s);
+                    let v: u8 = runtime.load(
+                        &Mem {
+                            align: 0,
+                            offset: 0,
+                        },
+                        self.start,
+                    )?;
+                    runtime.store(
+                        &Mem {
+                            align: 0,
+                            offset: 0,
+                        },
+                        v,
+                        self.start,
+                    )?;
+                    runtime.stack.push(d + 1);
+                    runtime.stack.push(s + 1);
+                } else {
+                    runtime.stack.push(d + n - 1);
+                    runtime.stack.push(s + n - 1);
+                    let v: u8 = runtime.load(
+                        &Mem {
+                            align: 0,
+                            offset: 0,
+                        },
+                        self.start,
+                    )?;
+                    runtime.store(
+                        &Mem {
+                            align: 0,
+                            offset: 0,
+                        },
+                        v,
+                        self.start,
+                    )?;
+                    runtime.stack.push(d);
+                    runtime.stack.push(s);
+                }
+                runtime.stack.push(n - 1);
+                Instruction {
+                    start: self.start,
+                    kind: InsnKind::MemoryCopy,
+                }
+                .execute(runtime)?;
+            }
             MemoryFill => {
                 // TODO: Iterative impl
                 let mem = &mut runtime.module.memory;
@@ -708,7 +765,7 @@ impl<'m, 's, I: Importer> Execute<'m, 's, I> for ast::Instruction {
                     // TODO: Proper TrapReason
                     return Err(Trap::new(TrapReason::DivByZeroOrOverflow, self.start));
                 } else if n == 0 {
-                    return Ok(ExecState::Ret);
+                    return Ok(ExecState::Continue);
                 } else {
                     runtime.stack.push(d);
                     runtime.stack.push(val);
